@@ -1,0 +1,659 @@
+{
+  "name": "WhatsApp AI Agent Appointment Setter",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "={{ $('WhatsApp Trigger').item.json.metadata.phone_number_id }}",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id }}",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [
+        360,
+        -140
+      ],
+      "id": "f10e13a4-8a65-47d3-8fb1-13e1ea995d92",
+      "name": "WhatsApp Business Cloud",
+      "webhookId": "49e76841-8ef1-4e15-961d-0b33d9d73603",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "h4lwyqWGYl0zwkBk",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {
+          "messageStatusUpdates": []
+        }
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        -420,
+        -140
+      ],
+      "id": "b4dd2eeb-72d4-4290-bb9f-06ced9b3e20c",
+      "name": "WhatsApp Trigger",
+      "webhookId": "23f2bf7d-0aff-44e1-99fd-0afb0bfd0dbf",
+      "credentials": {
+        "whatsAppTriggerApi": {
+          "id": "FN02X3BEvJoNiDOW",
+          "name": "WhatsApp OAuth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.messages[0].text.body }}",
+        "options": {
+          "systemMessage": "=# You have access to these tools:\n1) A Google Calendar tool that allows you to create, reschedule,\nand delete events in the calendar.\n2) Several Google Sheet tools:\n- \"Google Sheet - Add Row\": allows you to add new rows to a Google\nSheet\n- \"Google Sheet - Update Row\": allows you to update rows in a\nGoogle Sheet\n- \"Google Sheet - Read\": allows you to read content of the Google\nSheet\n3) Gmail - Send Confirmation User: allows you to send a\nconfirmation email to the user after the booking is confirmed.\nThe current time and date is the following Pakistan Time Zone: {{\n$now }}.\n# Your Task:\n1) Start by asking the user:\n\"Would you like to book an appointment?\"\nIf the user responds with yes, begin collecting their contact\ninformation.\nYou must always collect the contact information in the following\nstrict order:\n- First: Email address\n→ This will be used as the unique identifier to match the row in\nthe Google Sheet.\n→ After receiving the email address, immediately check if a row\nwith this email already exists using \"Google Sheet - Read\".\n- If found, use \"Google Sheet - Update Row\" to update the\nexisting row.\n- If not found, use \"Google Sheet - Add Row\" to create a new\none with the email.\n- Then: Full name\n- Then: Phone number\n- Then: Location or time zone\n\n❗ Only ask for one piece of information at a time.\n❗ Wait for the user's reply before asking the next question.\n❗ After every response, immediately update the Google Sheet using\n\"Google Sheet - Update Row\", matched by the email address.\n2) You must always store all user information (email address,\nname, phone number, and location/time zone) in the Google Sheet.\n2.5) After collecting the location/time zone, ask the user:\n\"What would you like to discuss during your appointment?\"\n- Wait for the user's response.\n- Then immediately update the same row in the Google Sheet using\n\"Google Sheet - Update Row\", matched by the email address.\n- Save the user’s response as the appointment topic or notes.\n3) Once the user's contact information and discussion topic have\nbeen collected, you must offer 5 available time slots for booking.\n- Use the assistant’s local time zone (Pakistan time) to determine\navailability.\n- The available office hours are in Pakistan Time zone:\n- Monday to Friday\n- Morning block: 09:00–12:00\n- Afternoon block: 13:00–17:00\n- (Never offer times between 12:00 and 13:00)\n- Do not offer any time slots that fall outside of these hours in\nGerman time, even if they appear to be valid in the user’s local\ntime zone.\n- When a user requests a time range (e.g., \"afternoon\"), follow\nthis logic:\n1. Understand the time range based on the user's time zone.\n2. Convert that time range into Pakistan time.\n3. Only offer time slots that match both the user's intent and\nfall within the Pakistan office hours.\n- You must check that a full 60-minute block is available:\n- The start and end time must not conflict with any existing\ncalendar event.\n- The time slot must begin at least 24 hours in the future.\n- Always offer the next 5 available 60-minute time slots that meet\nthe above criteria\n- Only display the time slots in the user’s time zone.\n→ Do not mention Pakistan time anywhere in your response.\n→ Do not include time conversions in parentheses.\n- Present the time slots in a simple, friendly format like but\nremember availabnle times you find in my Google Calendar are in\nGerman time zone. So you must always only show the user the\navialable times converted to his timezoone:\n\"Here are the next available time slots in your local time zone:\n- Thursday at 10:00 AM\n- Friday at 11:30 AM\n...\"\n- If no valid slots match the user's requested period (e.g.,\nafternoon), politely inform the user and offer the next closest\noptions.\n- Never mention unavailable or already booked time slots. Only\nshow the free ones. Do not include notes, reminders, or\nexplanations about other bookings.\n❗ You must not manually calculate or estimate time zone offsets.\n→ Use the Google Calendar tool to convert and format times.\n→ Always respect daylight saving time (DST) in both the user's and\nassistant's time zone.\n4) When the user confirms a preferred date and time, you must:\n- Create an event in the Google Calendar at the selected time.\n- Appointments should always be scheduled for 60 minutes unless\nthe user specifies otherwise.\n- Do not create a new row in the Google Sheet.\n- Instead, use the tool \"Google Sheet - Update Row\" to update the\nexisting row corresponding to the user (matched by email address)\nand add the selected date and time as the confirmed appointment.\n- The appointment time saved in the Google Sheet must always be in\nthe assistant’s local time (Pakistan) — never in the user's\ntime zone.\n- After the booking is confirmed, send a confirmation email to the\nuser using the \"Gmail - Send Confirmation User\" tool.\n- The email must include:\n- The confirmed appointment date and time (in the user's local\ntime zone)\n- The user's name and topic of discussion\n- A short, friendly message confirming the booking\nOnly send the confirmation email after the calendar event has been\ncreated and all data has been stored in the Google Sheet",
+          "maxIterations": 40
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        -120,
+        -140
+      ],
+      "id": "0a9cc08d-545b-426d-9e85-a87773ba35f9",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('WhatsApp Trigger').item.json.messages[0].from }} ",
+        "contextWindowLength": 30
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -260,
+        120
+      ],
+      "id": "1698a533-b8c1-45b0-91f3-61889b2ad409",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "rayyanshaikh1404@gmail.com",
+          "mode": "list",
+          "cachedResultName": "rayyanshaikh1404@gmail.com"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        -20,
+        80
+      ],
+      "id": "d5988f3f-d5e2-489c-a51f-b583e1803340",
+      "name": "Calendar Read",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "RwLn5WUw4pTc9SLG",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "rayyanshaikh1404@gmail.com",
+          "mode": "list",
+          "cachedResultName": "rayyanshaikh1404@gmail.com"
+        },
+        "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', `date and time for when the event should start`, 'string') }}",
+        "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', `date and time for when the event should end`, 'string') }}",
+        "useDefaultReminders": false,
+        "additionalFields": {
+          "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Summary', `title of the event`, 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        220,
+        80
+      ],
+      "id": "28c7bcad-ebc8-4357-a245-75c316558795",
+      "name": "Calendar Create",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "RwLn5WUw4pTc9SLG",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "value": "rayyanshaikh1404@gmail.com",
+          "mode": "list",
+          "cachedResultName": "rayyanshaikh1404@gmail.com"
+        },
+        "eventId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', `the id of the event`, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        500,
+        120
+      ],
+      "id": "80e5186f-5fd2-4e5f-9f8b-0ccd47248cec",
+      "name": "Calendar Delete",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "RwLn5WUw4pTc9SLG",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1hiKjexyrqK-IqzGaffMORQ5QeBAGeYYhfQPTfecdUiU",
+          "mode": "list",
+          "cachedResultName": " WhatsApp AI Agent Appointment Setter  - Rayyan Shaikh",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hiKjexyrqK-IqzGaffMORQ5QeBAGeYYhfQPTfecdUiU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 689245338,
+          "mode": "list",
+          "cachedResultName": "Appointments",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hiKjexyrqK-IqzGaffMORQ5QeBAGeYYhfQPTfecdUiU/edit#gid=689245338"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $fromAI(\"email\",\"the email address of the user gave you earlier\") }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Appointment Date",
+              "displayName": "Appointment Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Booking Status",
+              "displayName": "Booking Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Time Zone",
+              "displayName": "Time Zone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Intake Form",
+              "displayName": "Intake Form",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Reminder Sent",
+              "displayName": "Reminder Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.5,
+      "position": [
+        120,
+        260
+      ],
+      "id": "2007dfa2-5fa4-4b3c-bf62-42b2641e0585",
+      "name": "Create Rows",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SDzJ5cU6EfTyJGZv",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1hiKjexyrqK-IqzGaffMORQ5QeBAGeYYhfQPTfecdUiU",
+          "mode": "list",
+          "cachedResultName": " WhatsApp AI Agent Appointment Setter  - Rayyan Shaikh",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hiKjexyrqK-IqzGaffMORQ5QeBAGeYYhfQPTfecdUiU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 689245338,
+          "mode": "list",
+          "cachedResultName": "Appointments",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hiKjexyrqK-IqzGaffMORQ5QeBAGeYYhfQPTfecdUiU/edit#gid=689245338"
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "detectAutomatically",
+              "readRowsUntil": "firstEmptyRow"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.5,
+      "position": [
+        -100,
+        260
+      ],
+      "id": "c6824bb8-fcb8-45c7-a5bc-7424386ddec2",
+      "name": "Read Rows",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SDzJ5cU6EfTyJGZv",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1hiKjexyrqK-IqzGaffMORQ5QeBAGeYYhfQPTfecdUiU",
+          "mode": "list",
+          "cachedResultName": " WhatsApp AI Agent Appointment Setter  - Rayyan Shaikh",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hiKjexyrqK-IqzGaffMORQ5QeBAGeYYhfQPTfecdUiU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 689245338,
+          "mode": "list",
+          "cachedResultName": "Appointments",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hiKjexyrqK-IqzGaffMORQ5QeBAGeYYhfQPTfecdUiU/edit#gid=689245338"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $fromAI(\"email\",\"the email address of the user gave you earlier\") }}",
+            "Appointment Date": "={{ $fromAI(\"date\",\"the appointment date and time converted to Pakistan Timezone that the user confirmed as his appointment\") }}",
+            "Booking Status": "={{ $fromAI(\"status\",\"the status of the appointment which is either confirmed or cancelled\") }}",
+            "Time Zone": "={{ $fromAI(\"time_zone\",\"the time zone and location that the user tells you\") }}",
+            "Name": "={{ $fromAI(\"name\",\"the name of the user\") }}",
+            "Phone": "={{ $fromAI(\"phone\",\"the phone number that the user tells you. Always save the phone number with the country code that is associated with the time zone the user mentioned. But do not use a \"+\" sign and no space between the county code and the actual number.\") }}",
+            "Intake Form": "={{ $fromAI(\"intake_form\",\"specific topics or issues the user likes to discuss during the appointment\") }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Appointment Date",
+              "displayName": "Appointment Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Booking Status",
+              "displayName": "Booking Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Time Zone",
+              "displayName": "Time Zone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Intake Form",
+              "displayName": "Intake Form",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Reminder Sent",
+              "displayName": "Reminder Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.5,
+      "position": [
+        380,
+        260
+      ],
+      "id": "eafd6581-5f9d-4155-817a-f61ae94f23b9",
+      "name": "Update Rows",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SDzJ5cU6EfTyJGZv",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $fromAI(\"email\",\"the email address of the user gave you earlier\") }}",
+        "subject": "={{ $fromAI(\"subject\",\"the email subjectline that just is [New Booking] + Booking date and time converted to the user timezone that he mentioned earlier'\") }}",
+        "message": "={{ $fromAI(\"body\",\"the email body that contains the message that the booking of the user was confirmed along with booking date, email, name, timezone, what user wants to discuss during the appointment\") }}",
+        "options": {
+          "bccList": "rayyanshaikh1404@gmail.com"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        640,
+        240
+      ],
+      "id": "875c5ab4-3746-42e4-9c71-6e051d7eef4b",
+      "name": "Gmail",
+      "webhookId": "70cc1611-7e9a-4be1-99de-a471ea2c3622",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "fWrxkAO2Icw8HUOQ",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -420,
+        120
+      ],
+      "id": "10a0812e-ee98-4b01-b55a-c938c9819f63",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "OncmBr9ZraByqddq",
+          "name": "OpenRouter account 3"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Business Cloud",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calendar Read": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calendar Create": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calendar Delete": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Rows": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Rows": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Rows": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Karachi",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "f928a205-6709-4f57-8220-af8360715b27",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "afba0edf3025714e439d0d9a7fd00d512e4a26a7efb5d6c437ef546a6da683a9"
+  },
+  "id": "wTkLWPubRGHdR5FY",
+  "tags": []
+}
